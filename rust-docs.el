@@ -27,6 +27,7 @@
                  (rust-docs--search-nodes-by-entry-type
                   dom entry-type))
           (push (rust-docs--entry-from-node entry-node) result)))
+      (message "Got result for %s@%s: %s" crate-name version result)
       result)))
 
 (defun rust-docs-search-entry (name &optional version href)
@@ -126,25 +127,31 @@ Returns alist of (dependency-name . version)"
           (push dep result))))
     result))
 
-;;; Choose document entry
-;; (completing-read
-;;  "Entry: "
-;;  (mapcar #'rust-docs--entry-name (rust-docs--search-crate "tower" "latest")))
-
-;;; Get dom for the entry
-;; (with-current-buffer (get-buffer-create "*org-docs.rs*")
-;;   (erase-buffer)
-;;   (org-mode)
-;;   (let ((dom
-;;          (rust-docs-search-entry "tower"
-;;                                  "latest"
-;;                                  "trait.Layer.html")))
-;;     (rust-docs--dom-to-org dom)))
-
-(message "%s"
-         (rust-docs--parse-cargo-toml
-          (expand-file-name "~/code/personal/wingdb/Cargo.toml")))
-
+(defun rust-docs-open ()
+  "Show rust docs."
+  (interactive)
+  (let* ((dependencies (rust-docs--collect-dependencies))
+         (dependency (completing-read "Crate: " dependencies))
+         (version
+          (or (cdr (alist-get dependency dependencies)) "latest"))
+         (entries (rust-docs--search-crate dependency version))
+         (entry-name
+          (completing-read
+           "Entry: " (mapcar #'rust-docs--entry-name entries)))
+         (entry
+          (seq-find
+           (lambda (el)
+             (string= entry-name (rust-docs--entry-name el)))
+           entries)))
+    (with-current-buffer (get-buffer-create "*docs.rs*")
+      (erase-buffer)
+      (org-mode)
+      (let ((dom
+             (rust-docs-search-entry dependency
+                                     version
+                                     (rust-docs--entry-href entry))))
+        (rust-docs--dom-to-org dom))
+      (goto-char 1))))
 
 (provide 'rust-docs)
 ;;; rust-docs.el ends here
