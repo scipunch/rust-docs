@@ -143,26 +143,26 @@ Inserts string nodes if INSERT-TEXT"
 (defun rust-docs--h1-to-org (node)
   "Converts h1 NODE to org."
   (insert
-   "* " (dom-text node) "~" (dom-text (dom-by-tag node 'span)) "~\n"))
+   "* " (dom-text node) "=" (dom-text (dom-by-tag node 'span)) "=\n"))
 
 (defun rust-docs--h2-to-org (node)
   "Converts h2 NODE to org."
-  (insert "** " (dom-texts node) "\n"))
+  (insert "** " (dom-texts node "") "\n"))
 
 (defun rust-docs--h4-to-org (node)
   "Converts h4 NODE to org."
-  (insert "*** " (dom-texts node) "\n"))
+  (insert "*** " (dom-texts node "") "\n"))
 
 (defun rust-docs--h5-to-org (node)
   "Converts h4 NODE to org."
-  (insert "**** " (dom-texts node) "\n"))
+  (insert "**** " (dom-texts node "") "\n"))
 
 (defun rust-docs--code-to-org (node)
   "Converts code NODE to org."
   (let* ((children (dom-children node))
          (org
           (if (eq (length children) 1)
-              `("~" ,(dom-texts node) "~")
+              `("=" ,(dom-text node) "=")
             `("#+begin_src rust\n"
               ,(dom-texts node "")
               "\n"
@@ -174,7 +174,9 @@ Inserts string nodes if INSERT-TEXT"
 
 (defun rust-docs--p-to-org (node)
   "Converts paragraph NODE to org."
-  (insert (dom-texts node) "\n\n"))
+  (dolist (child (dom-children node))
+    (rust-docs--dom-to-org child t))
+  (insert "\n\n"))
 
 (defun rust-docs--li-to-org (node)
   "Convert li NODE to org."
