@@ -62,6 +62,8 @@
 
 ; end-region   -- Public API
 
+; begin-region -- Fetching info from docs.rs
+
 (defun rust-docs--search-crate (crate-name version)
   "Searches for the CRATE-NAME with VERSION on the docs.rs."
   (with-current-buffer (url-retrieve-synchronously
@@ -105,6 +107,8 @@
   (rust-docs--make-entry
    :name (dom-attr node 'title)
    :href (dom-attr node 'href)))
+
+; end-region   -- Fetching info from docs.rs
 
 ; begin-region -- HTML DOM to Org
 
