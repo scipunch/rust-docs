@@ -13,6 +13,16 @@
 (defconst rust-docs--doc-entry-type '("mod" "struct" "trait" "macro")
   "All possible types of doc entries.")
 
+(defgroup rust-docs 'nil
+  "Customization for Rust docs."
+  :group 'frames)
+
+(defcustom rust-docs-debug nil
+  "Show debug messages."
+  :type 'boolean
+  :group 'rust-docs
+  :options '(t nil))
+
 
 (defun rust-docs--search-crate (crate-name version)
   "Searches for the CRATE-NAME with VERSION on the docs.rs."
@@ -27,7 +37,7 @@
                  (rust-docs--search-nodes-by-entry-type
                   dom entry-type))
           (push (rust-docs--entry-from-node entry-node) result)))
-      (message "Got result for %s@%s: %s" crate-name version result)
+      (rust-docs--debug "Got result for %s@%s: %s" crate-name version result)
       result)))
 
 (defun rust-docs-search-entry (name &optional version href)
@@ -125,6 +135,8 @@ Returns alist of (dependency-name . version)"
       (dolist (dep (rust-docs--parse-cargo-toml path))
         (unless (alist-get (car dep) result)
           (push dep result))))
+    (rust-docs--debug "Collected %d dependencies"
+                      (length result))
     result))
 
 (defun rust-docs-open ()
@@ -152,6 +164,11 @@ Returns alist of (dependency-name . version)"
                                      (rust-docs--entry-href entry))))
         (rust-docs--dom-to-org dom))
       (goto-char 1))))
+
+(defun rust-docs--debug (format-string &rest args)
+  "Debug message FORMAT-STRING with ARGS."
+  (when rust-docs-debug
+    (apply #'message (format "[rust-docs]: %s" format-string) args)))
 
 (provide 'rust-docs)
 ;;; rust-docs.el ends here
