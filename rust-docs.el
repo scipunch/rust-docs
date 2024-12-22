@@ -138,6 +138,9 @@ Inserts links as org links if INSERT-LINKS"
     (rust-docs--p-to-org node))
    ((eq (dom-tag node) 'li)
     (rust-docs--li-to-org node))
+   ((and (eq (dom-tag node) 'div)
+         (dom-by-class node "docblock-short"))
+    (rust-docs--docblock-short-to-org node))
    ((and insert-links (eq (dom-tag node) 'a))
     (rust-docs--a-to-org node))
    (t
@@ -192,6 +195,10 @@ Inserts links as org links if INSERT-LINKS"
 (defun rust-docs--a-to-org (node)
   "Convert a NODE to org."
   (insert "[[" (dom-attr node 'href) "][" (dom-texts node "") "]]"))
+
+(defun rust-docs--docblock-short-to-org (node)
+  "Convert a div NODE to org."
+  (insert " " (dom-texts node "")))
 
 ; end-region   -- HTML DOM to Org
 
