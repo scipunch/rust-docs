@@ -192,10 +192,14 @@ Returns alist of (dependency-name . version)"
 
 ; end-region   -- Cargo.toml parsing
 
+; begin-region -- Logging
+
 (defun rust-docs--debug (format-string &rest args)
   "Debug message FORMAT-STRING with ARGS."
   (when rust-docs-debug
     (apply #'message (format "[rust-docs]: %s" format-string) args)))
+
+; end-region   -- Logging
 
 (provide 'rust-docs)
 ;;; rust-docs.el ends here
