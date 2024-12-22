@@ -116,16 +116,19 @@
 
 ; begin-region -- HTML DOM to Org
 
-(defun rust-docs--dom-to-org (node)
-  "Reqursively converts NODE to org."
+(defun rust-docs--dom-to-org (node &optional insert-text)
+  "Reqursively converts NODE to org.
+Inserts string nodes if INSERT-TEXT"
   (cond
    ((stringp node)
-    nil)
+    (rust-docs--debug "Got string node=[%s]" node)
+    (and insert-text (insert node)))
    ((eq (dom-tag node) 'h1)
     (rust-docs--h1-to-org node))
    ((eq (dom-tag node) 'h2)
-    (insert "\n")
     (rust-docs--h2-to-org node))
+   ((eq (dom-tag node) 'h4)
+     (rust-docs--h4-to-org node))
    ((eq (dom-tag node) 'code)
     (rust-docs--code-to-org node))
    ((eq (dom-tag node) 'p)
@@ -144,6 +147,10 @@
   "Converts h2 NODE to org."
   (insert "** " (dom-texts node) "\n"))
 
+(defun rust-docs--h4-to-org (node)
+  "Converts h4 NODE to org."
+  (insert "*** " (dom-texts node) "\n"))
+
 (defun rust-docs--code-to-org (node)
   "Converts code NODE to org."
   (let* ((children (dom-children node))
@@ -161,12 +168,13 @@
 
 (defun rust-docs--p-to-org (node)
   "Converts paragraph NODE to org."
-  (insert (dom-texts node) "\n"))
+  (insert (dom-texts node) "\n\n"))
 
 (defun rust-docs--li-to-org (node)
   "Convert li NODE to org."
   (insert "- ")
-  (mapc #'rust-docs--dom-to-org (dom-children node))
+  (dolist (child (dom-children node))
+    (rust-docs--dom-to-org child t))
   (insert "\n"))
 
 ; end-region   -- HTML DOM to Org
