@@ -164,7 +164,7 @@ Inserts string nodes if INSERT-TEXT"
           (if (eq (length children) 1)
               `("~" ,(dom-texts node) "~")
             `("#+begin_src rust\n"
-              ,(dom-texts node)
+              ,(dom-texts node "")
               "\n"
               "#+end_src\n\n"))))
     (rust-docs--debug "Code node=%s children-count=%s"
