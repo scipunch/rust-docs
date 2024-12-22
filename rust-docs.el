@@ -58,7 +58,8 @@
                                      version
                                      (rust-docs--entry-href entry))))
         (rust-docs--dom-to-org dom))
-      (goto-char 1))))
+      (goto-char 1)
+      (pop-to-buffer (current-buffer)))))
 
 ; end-region   -- Public API
 
@@ -197,6 +198,18 @@ Returns alist of (dependency-name . version)"
     result))
 
 ; end-region   -- Cargo.toml parsing
+
+; begin-region -- UI
+
+(unless (alist-get "\\*docs.rs\\*" display-buffer-alist)
+  (add-to-list
+   'display-buffer-alist
+   '("\\*docs.rs\\*"
+     (display-buffer-reuse-window)
+     (dedicated . t)
+     (body-function . select-window))))
+
+; end-region   -- UI
 
 ; begin-region -- Logging
 
