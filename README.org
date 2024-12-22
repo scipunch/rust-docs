@@ -1,0 +1,13 @@
+#+title: Rust docs
+#+author: SciPunch
+
+* Tasks
+** TODO Required features label
+Show feature name that allows to use given docs entry
+
+** TODO HTML table to org table
+Add support for the HTML tables
+
+** TODO Introduce special mode for the docs
+It's handy to bind =q= key to quit doc window.
+But this bind starts working in all =org-mode= buffers.
