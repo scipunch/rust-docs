@@ -130,6 +130,8 @@
     (rust-docs--code-to-org node))
    ((eq (dom-tag node) 'p)
     (rust-docs--p-to-org node))
+   ((eq (dom-tag node) 'li)
+    (rust-docs--li-to-org node))
    (t
     (mapc #'rust-docs--dom-to-org (dom-children node)))))
 
@@ -144,11 +146,28 @@
 
 (defun rust-docs--code-to-org (node)
   "Converts code NODE to org."
-  (insert "#+begin_src rust\n" (dom-texts node) "\n" "#+end_src\n"))
+  (let* ((children (dom-children node))
+         (org
+          (if (eq (length children) 1)
+              `("~" ,(dom-texts node) "~")
+            `("#+begin_src rust\n"
+              ,(dom-texts node)
+              "\n"
+              "#+end_src\n"))))
+    (rust-docs--debug "Code node=%s children-count=%s"
+                      node
+                      (length (dom-children node)))
+    (apply #'insert org)))
 
 (defun rust-docs--p-to-org (node)
   "Converts paragraph NODE to org."
   (insert (dom-texts node) "\n"))
+
+(defun rust-docs--li-to-org (node)
+  "Convert li NODE to org."
+  (insert "- ")
+  (mapc #'rust-docs--dom-to-org (dom-children node))
+  (insert "\n"))
 
 ; end-region   -- HTML DOM to Org
 
