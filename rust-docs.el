@@ -51,6 +51,7 @@
              (string= entry-name (rust-docs--entry-name el)))
            entries)))
     (with-current-buffer (get-buffer-create "*docs.rs*")
+      (setq-local buffer-read-only nil)
       (erase-buffer)
       (org-mode)
       (let ((dom
@@ -60,6 +61,7 @@
         (rust-docs--dom-to-org dom))
       (goto-char 1)
       (local-set-key "q" #'quit-window)
+      (setq-local buffer-read-only t)
       (pop-to-buffer (current-buffer)))))
 
 ; end-region   -- Public API
