@@ -128,7 +128,9 @@ Inserts string nodes if INSERT-TEXT"
    ((eq (dom-tag node) 'h2)
     (rust-docs--h2-to-org node))
    ((eq (dom-tag node) 'h4)
-     (rust-docs--h4-to-org node))
+    (rust-docs--h4-to-org node))
+   ((eq (dom-tag node) 'h5)
+    (rust-docs--h5-to-org node))
    ((eq (dom-tag node) 'code)
     (rust-docs--code-to-org node))
    ((eq (dom-tag node) 'p)
@@ -150,6 +152,10 @@ Inserts string nodes if INSERT-TEXT"
 (defun rust-docs--h4-to-org (node)
   "Converts h4 NODE to org."
   (insert "*** " (dom-texts node) "\n"))
+
+(defun rust-docs--h5-to-org (node)
+  "Converts h4 NODE to org."
+  (insert "**** " (dom-texts node) "\n"))
 
 (defun rust-docs--code-to-org (node)
   "Converts code NODE to org."
