@@ -6,6 +6,7 @@
 ;;; Code:
 (require 'dom)
 (require 'cl-lib)
+(require 'project)
 
 (cl-defstruct
  (rust-docs--entry (:constructor rust-docs--make-entry)) name href)
@@ -124,9 +125,16 @@ Returns alist of (dependency-name . version)"
 
 (defun rust-docs--find-all-cargo-files ()
   "Searches for the Cargo.toml files."
-  (split-string
-   (shell-command-to-string
-    (format "find %s -name Cargo.toml -print" default-directory))))
+  (let* ((default-directory
+          (or (and (project-current) (project-root (project-current)))
+              default-directory))
+         (res
+          (split-string
+           (shell-command-to-string
+            (format "find %s -name Cargo.toml -print"
+                    default-directory)))))
+    (rust-docs--debug "Found %d Cargo.toml files" (length res))
+    res))
 
 (defun rust-docs--collect-dependencies ()
   "Collects dependencies from the project."
