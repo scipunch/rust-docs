@@ -77,7 +77,10 @@
                  (rust-docs--search-nodes-by-entry-type
                   dom entry-type))
           (push (rust-docs--entry-from-node entry-node) result)))
-      (rust-docs--debug "Got result for %s@%s: %s" crate-name version result)
+      (rust-docs--debug "Got result for %s@%s: %s"
+                        crate-name
+                        version
+                        result)
       result)))
 
 (defun rust-docs-search-entry (name &optional version href)
@@ -190,8 +193,7 @@ Returns alist of (dependency-name . version)"
       (dolist (dep (rust-docs--parse-cargo-toml path))
         (unless (alist-get (car dep) result)
           (push dep result))))
-    (rust-docs--debug "Collected %d dependencies"
-                      (length result))
+    (rust-docs--debug "Collected %d dependencies" (length result))
     result))
 
 ; end-region   -- Cargo.toml parsing
