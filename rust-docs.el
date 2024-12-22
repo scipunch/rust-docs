@@ -59,6 +59,7 @@
                                      (rust-docs--entry-href entry))))
         (rust-docs--dom-to-org dom))
       (goto-char 1)
+      (local-set-key "q" #'quit-window)
       (pop-to-buffer (current-buffer)))))
 
 ; end-region   -- Public API
