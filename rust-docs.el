@@ -216,20 +216,22 @@ Inserts links as org links if INSERT-LINKS"
 Returns alist of (dependency-name . version)"
   (with-temp-buffer
     (insert-file-contents path)
-    (let ((begin (re-search-forward "^\\[dependencies\\]$"))
+    (let ((begin (re-search-forward "^\\[dependencies\\]$" nil t 1))
           (end
            (or (re-search-forward "^\\[.*\\]$" nil t 1) (point-max))))
-      (goto-char begin)
-      (while (and
-              (< (point) end)
-              (re-search-forward
-               "^\\([a-z-_0-9]+\\)\\ +?=\\(.*\"\\([0-9.]+\\)\"\\)?.*$"
-               nil t))
-        (replace-match "(\"\\1\" . \"\\3\")" nil nil))
-      (eval
-       (car
-        (read-from-string
-         (format "'(%s)" (buffer-substring begin (point)))))))))
+      (when begin
+        (goto-char begin)
+        (while
+            (and
+             (< (point) end)
+             (re-search-forward
+              "^\\([a-z-_0-9]+\\)\\ +?=\\(.*\"\\([0-9.]+\\)\"\\)?.*$"
+              nil t))
+          (replace-match "(\"\\1\" . \"\\3\")" nil nil))
+        (eval
+         (car
+          (read-from-string
+           (format "'(%s)" (buffer-substring begin (point))))))))))
 
 (defun rust-docs--find-all-cargo-files ()
   "Searches for the Cargo.toml files."
