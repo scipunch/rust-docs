@@ -143,14 +143,18 @@ Inserts links as org links if INSERT-LINKS"
     (rust-docs--docblock-short-to-org node))
    ((and insert-links (eq (dom-tag node) 'a))
     (rust-docs--a-to-org node))
+   ((eq (dom-tag node) 'button)
+    nil)
    (t
     (dolist (child (dom-children node))
       (rust-docs--dom-to-org child insert-text insert-links)))))
 
 (defun rust-docs--h1-to-org (node)
   "Converts h1 NODE to org."
-  (insert
-   "* " (dom-text node) "=" (dom-text (dom-by-tag node 'span)) "=\n"))
+  (insert "* ")
+  (dolist (child (dom-children node))
+    (rust-docs--dom-to-org child t t))
+  (insert "\n"))
 
 (defun rust-docs--h2-to-org (node)
   "Converts h2 NODE to org."
