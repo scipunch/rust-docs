@@ -8,11 +8,17 @@
 (require 'cl-lib)
 (require 'project)
 
+; begin-region -- Domain
+
 (cl-defstruct
  (rust-docs--entry (:constructor rust-docs--make-entry)) name href)
 
 (defconst rust-docs--doc-entry-type '("mod" "struct" "trait" "macro")
   "All possible types of doc entries.")
+
+; end-region   -- Domain
+
+; begin-region -- Custom configuration
 
 (defgroup rust-docs 'nil
   "Customization for Rust docs."
@@ -24,6 +30,37 @@
   :group 'rust-docs
   :options '(t nil))
 
+; end-region   -- Custom configuration
+
+; begin-region -- Public API
+
+(defun rust-docs-open ()
+  "Show rust docs."
+  (interactive)
+  (let* ((dependencies (rust-docs--collect-dependencies))
+         (dependency (completing-read "Crate: " dependencies))
+         (version
+          (or (cdr (alist-get dependency dependencies)) "latest"))
+         (entries (rust-docs--search-crate dependency version))
+         (entry-name
+          (completing-read
+           "Entry: " (mapcar #'rust-docs--entry-name entries)))
+         (entry
+          (seq-find
+           (lambda (el)
+             (string= entry-name (rust-docs--entry-name el)))
+           entries)))
+    (with-current-buffer (get-buffer-create "*docs.rs*")
+      (erase-buffer)
+      (org-mode)
+      (let ((dom
+             (rust-docs-search-entry dependency
+                                     version
+                                     (rust-docs--entry-href entry))))
+        (rust-docs--dom-to-org dom))
+      (goto-char 1))))
+
+; end-region   -- Public API
 
 (defun rust-docs--search-crate (crate-name version)
   "Searches for the CRATE-NAME with VERSION on the docs.rs."
@@ -69,6 +106,8 @@
    :name (dom-attr node 'title)
    :href (dom-attr node 'href)))
 
+; begin-region -- HTML DOM to Org
+
 (defun rust-docs--dom-to-org (node)
   "Reqursively converts NODE to org."
   (cond
@@ -102,6 +141,10 @@
 (defun rust-docs--p-to-org (node)
   "Converts paragraph NODE to org."
   (insert (dom-texts node) "\n"))
+
+; end-region   -- HTML DOM to Org
+
+; begin-region -- Cargo.toml parsing
 
 (defun rust-docs--parse-cargo-toml (path)
   "Parses dependencies from Cargo.toml under PATH.
@@ -147,31 +190,7 @@ Returns alist of (dependency-name . version)"
                       (length result))
     result))
 
-(defun rust-docs-open ()
-  "Show rust docs."
-  (interactive)
-  (let* ((dependencies (rust-docs--collect-dependencies))
-         (dependency (completing-read "Crate: " dependencies))
-         (version
-          (or (cdr (alist-get dependency dependencies)) "latest"))
-         (entries (rust-docs--search-crate dependency version))
-         (entry-name
-          (completing-read
-           "Entry: " (mapcar #'rust-docs--entry-name entries)))
-         (entry
-          (seq-find
-           (lambda (el)
-             (string= entry-name (rust-docs--entry-name el)))
-           entries)))
-    (with-current-buffer (get-buffer-create "*docs.rs*")
-      (erase-buffer)
-      (org-mode)
-      (let ((dom
-             (rust-docs-search-entry dependency
-                                     version
-                                     (rust-docs--entry-href entry))))
-        (rust-docs--dom-to-org dom))
-      (goto-char 1))))
+; end-region   -- Cargo.toml parsing
 
 (defun rust-docs--debug (format-string &rest args)
   "Debug message FORMAT-STRING with ARGS."
