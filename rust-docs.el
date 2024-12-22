@@ -60,7 +60,8 @@
                                      (rust-docs--entry-href entry))))
         (rust-docs--dom-to-org dom))
       (goto-char 1)
-      (local-set-key "q" #'quit-window)
+      ;; Could be done only after migrating to the unique major mode
+      ;; (keymap-local-set "q" #'quit-window)
       (setq-local buffer-read-only t)
       (pop-to-buffer (current-buffer)))))
 
