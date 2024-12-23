@@ -64,9 +64,9 @@
              (string= entry-name (rust-docs--entry-name el)))
            entries))
          (dom
-          (rust-docs-search-entry
+          (rust-docs--search-entry
            dependency version (rust-docs--entry-href entry))))
-    (rust-docs--open dom)))
+    (rust-docs--open dom dependency version)))
 
 ; end-region   -- Public API
 
@@ -88,22 +88,24 @@
                         result)
       result)))
 
-(defun rust-docs-search-entry (name version href)
+(defun rust-docs--search-entry (name version href)
   "Returns details of crate with NAME and VERSION for entry with HREF."
   (with-current-buffer (rust-docs--read-crate-entry-content
                         name version href)
     (let ((dom (libxml-parse-html-region)))
       (dom-by-id dom "main-content"))))
 
-(defun rust-docs--open (dom)
-  "Creates or reuses docs buffer, parsed DOM and inserts result."
+(defun rust-docs--open (dom crate-name crate-version)
+  "Creates or reuses docs buffer, parsed DOM and inserts result.
+CRATE-NAME and CRATE-VERSION required for the links generation."
   (with-current-buffer (get-buffer-create "*docs.rs*")
     (setq-local buffer-read-only nil)
     (erase-buffer)
-    (rust-docs--dom-to-org dom)
+    (rust-docs--dom-to-org dom crate-name crate-version)
     (goto-char 1)
     (rust-docs-mode)
     (setq-local buffer-read-only t)
+    (setq-local org-link-elisp-confirm-function nil)
     (pop-to-buffer (current-buffer))))
 
 (defun rust-docs--search-nodes-by-entry-type (dom entry-type)
@@ -161,8 +163,10 @@ HREF is optional and appended to the end."
 
 ; begin-region -- HTML DOM to Org
 
-(defun rust-docs--dom-to-org (node &optional insert-text insert-links)
+(defun rust-docs--dom-to-org
+    (node crate-name crate-version &optional insert-text insert-links)
   "Reqursively converts NODE to org.
+CRATE-NAME and CRATE-VERSION required for links generation.
 Inserts string nodes if INSERT-TEXT
 Inserts links as org links if INSERT-LINKS"
   (cond
@@ -180,25 +184,27 @@ Inserts links as org links if INSERT-LINKS"
    ((eq (dom-tag node) 'code)
     (rust-docs--code-to-org node))
    ((eq (dom-tag node) 'p)
-    (rust-docs--p-to-org node))
+    (rust-docs--p-to-org node crate-name crate-version))
    ((eq (dom-tag node) 'li)
-    (rust-docs--li-to-org node))
+    (rust-docs--li-to-org node crate-name crate-version))
    ((and (eq (dom-tag node) 'div)
          (dom-by-class node "docblock-short"))
     (rust-docs--docblock-short-to-org node))
    ((and insert-links (eq (dom-tag node) 'a))
-    (rust-docs--a-to-org node))
+    (rust-docs--a-to-org node crate-name crate-version))
    ((eq (dom-tag node) 'button)
     nil)
    (t
     (dolist (child (dom-children node))
-      (rust-docs--dom-to-org child insert-text insert-links)))))
+      (rust-docs--dom-to-org child crate-name crate-version
+                             insert-text
+                             insert-links)))))
 
 (defun rust-docs--h1-to-org (node)
   "Converts h1 NODE to org."
   (insert "* ")
   (dolist (child (dom-children node))
-    (rust-docs--dom-to-org child t t))
+    (rust-docs--dom-to-org child nil nil t t)) ;; There is no links in h1
   (insert "\n"))
 
 (defun rust-docs--h2-to-org (node)
@@ -228,22 +234,35 @@ Inserts links as org links if INSERT-LINKS"
                       (length (dom-children node)))
     (apply #'insert org)))
 
-(defun rust-docs--p-to-org (node)
-  "Converts paragraph NODE to org."
+(defun rust-docs--p-to-org (node crate-name crate-version)
+  "Converts paragraph NODE to org.
+There could be links in paragraph so CRATE-NAME and CRATE-VERSION required."
   (dolist (child (dom-children node))
-    (rust-docs--dom-to-org child t t))
+    (rust-docs--dom-to-org child crate-name crate-version t t))
   (insert "\n\n"))
 
-(defun rust-docs--li-to-org (node)
-  "Converts li NODE to org."
+(defun rust-docs--li-to-org (node crate-name crate-version)
+  "Converts li NODE to org.
+There could be links in list so CRATE-NAME and CRATE-VERSION required."
   (insert "- ")
   (dolist (child (dom-children node))
-    (rust-docs--dom-to-org child t t))
+    (rust-docs--dom-to-org child crate-name crate-version t t))
   (insert "\n"))
 
-(defun rust-docs--a-to-org (node)
-  "Converts a NODE to org."
-  (insert "[[" (dom-attr node 'href) "][" (dom-texts node "") "]]"))
+(defun rust-docs--a-to-org (node crate-name crate-version)
+  "Converts a NODE to org.
+CRATE-NAME and CRATE-VERSION describe current crate."
+  (insert
+   "[[elisp:"
+   (format "%s"
+           `(rust-docs--open
+             (rust-docs-search-entry
+              ,(format "\"%s\"" crate-name)
+              ,(format "\"%s\"" crate-version)
+              ,(format "\"%s\"" (dom-attr node 'href)))
+             ,(format "\"%s\"" crate-name)
+             ,(format "\"%s\"" crate-version))) ;; TODO: Rewrite these naive formats
+   "][" (dom-texts node "") "]]"))
 
 (defun rust-docs--docblock-short-to-org (node)
   "Converts a div NODE to org."
