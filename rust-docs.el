@@ -128,8 +128,7 @@
    ((eq rust-docs-resourse 'local)
     (error "Local not supported yet"))
    ((eq rust-docs-resourse 'web)
-    (url-retrieve-synchronously
-     (rust-docs--web-url name version))))
+    (url-retrieve-synchronously (rust-docs--web-url name version)))))
 
 (defun rust-docs--read-crate-entry-content (name version href)
   "Reads content of the HREF of crate NAME with VERSION."
@@ -251,6 +250,29 @@ Inserts links as org links if INSERT-LINKS"
 
 ; begin-region -- Cargo.toml parsing
 
+(defun rust-docs--collect-dependencies ()
+  "Collects dependencies from the project."
+  (let (result)
+    (dolist (path (rust-docs--find-all-cargo-files))
+      (dolist (dep (rust-docs--parse-cargo-toml path))
+        (unless (alist-get (car dep) result)
+          (push dep result))))
+    (rust-docs--debug "Collected %d dependencies" (length result))
+    result))
+
+(defun rust-docs--find-all-cargo-files ()
+  "Searches for the Cargo.toml files."
+  (let* ((default-directory
+          (or (and (project-current) (project-root (project-current)))
+              default-directory))
+         (res
+          (split-string
+           (shell-command-to-string
+            (format "find %s -name Cargo.toml -print"
+                    default-directory)))))
+    (rust-docs--debug "Found %d Cargo.toml files" (length res))
+    res))
+
 (defun rust-docs--parse-cargo-toml (path)
   "Parses dependencies from Cargo.toml under PATH.
 Returns alist of (dependency-name . version)"
@@ -272,29 +294,6 @@ Returns alist of (dependency-name . version)"
          (car
           (read-from-string
            (format "'(%s)" (buffer-substring begin (point))))))))))
-
-(defun rust-docs--find-all-cargo-files ()
-  "Searches for the Cargo.toml files."
-  (let* ((default-directory
-          (or (and (project-current) (project-root (project-current)))
-              default-directory))
-         (res
-          (split-string
-           (shell-command-to-string
-            (format "find %s -name Cargo.toml -print"
-                    default-directory)))))
-    (rust-docs--debug "Found %d Cargo.toml files" (length res))
-    res))
-
-(defun rust-docs--collect-dependencies ()
-  "Collects dependencies from the project."
-  (let (result)
-    (dolist (path (rust-docs--find-all-cargo-files))
-      (dolist (dep (rust-docs--parse-cargo-toml path))
-        (unless (alist-get (car dep) result)
-          (push dep result))))
-    (rust-docs--debug "Collected %d dependencies" (length result))
-    result))
 
 ; end-region   -- Cargo.toml parsing
 
