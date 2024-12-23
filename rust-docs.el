@@ -221,18 +221,18 @@ Inserts links as org links if INSERT-LINKS"
   (insert "\n\n"))
 
 (defun rust-docs--li-to-org (node)
-  "Convert li NODE to org."
+  "Converts li NODE to org."
   (insert "- ")
   (dolist (child (dom-children node))
     (rust-docs--dom-to-org child t t))
   (insert "\n"))
 
 (defun rust-docs--a-to-org (node)
-  "Convert a NODE to org."
+  "Converts a NODE to org."
   (insert "[[" (dom-attr node 'href) "][" (dom-texts node "") "]]"))
 
 (defun rust-docs--docblock-short-to-org (node)
-  "Convert a div NODE to org."
+  "Converts a div NODE to org."
   (insert " " (dom-texts node "")))
 
 ; end-region   -- HTML DOM to Org
