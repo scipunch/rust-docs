@@ -16,6 +16,13 @@
 (defconst rust-docs--doc-entry-type '("mod" "struct" "trait" "macro")
   "All possible types of doc entries.")
 
+(define-derived-mode
+ rust-docs-mode
+ org-mode
+ "Rust-Docs"
+ "Special org mode for the Rust docs."
+ (keymap-local-set "q" #'quit-window))
+
 ; end-region   -- Domain
 
 ; begin-region -- Custom configuration
@@ -65,8 +72,7 @@
               dependency version (rust-docs--entry-href entry))))
         (rust-docs--dom-to-org dom))
       (goto-char 1)
-      ;; Could be done only after migrating to the unique major mode
-      ;; (keymap-local-set "q" #'quit-window)
+      (rust-docs-mode)
       (setq-local buffer-read-only t)
       (pop-to-buffer (current-buffer)))))
 
