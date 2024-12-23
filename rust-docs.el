@@ -30,6 +30,12 @@
   :group 'rust-docs
   :options '(t nil))
 
+(defcustom rust-docs-resourse 'web
+  "Resource to search for the documentation from."
+  :type 'string
+  :group 'rust-docs
+  :options '(web local))
+
 ; end-region   -- Custom configuration
 
 ; begin-region -- Public API
@@ -55,9 +61,8 @@
       (erase-buffer)
       (org-mode)
       (let ((dom
-             (rust-docs-search-entry dependency
-                                     version
-                                     (rust-docs--entry-href entry))))
+             (rust-docs-search-entry
+              dependency version (rust-docs--entry-href entry))))
         (rust-docs--dom-to-org dom))
       (goto-char 1)
       ;; Could be done only after migrating to the unique major mode
@@ -69,12 +74,9 @@
 
 ; begin-region -- Fetching info from docs.rs
 
-(defun rust-docs--search-crate (crate-name version)
-  "Searches for the CRATE-NAME with VERSION on the docs.rs."
-  (with-current-buffer (url-retrieve-synchronously
-                        (url-encode-url
-                         (format "https://docs.rs/%s/%s/%s"
-                                 crate-name version crate-name)))
+(defun rust-docs--search-crate (name version)
+  "Searches for the crate NAME with VERSION on the docs.rs."
+  (with-current-buffer (rust-docs--read-crate-contents name version)
     (let* ((dom (libxml-parse-html-region))
            result)
       (dolist (entry-type rust-docs--doc-entry-type)
@@ -83,17 +85,15 @@
                   dom entry-type))
           (push (rust-docs--entry-from-node entry-node) result)))
       (rust-docs--debug "Got result for %s@%s: %s"
-                        crate-name
+                        name
                         version
                         result)
       result)))
 
-(defun rust-docs-search-entry (name &optional version href)
+(defun rust-docs-search-entry (name version href)
   "Returns details of crate with NAME and VERSION for entry with HREF."
-  (with-current-buffer (url-retrieve-synchronously
-                        (url-encode-url
-                         (format "https://docs.rs/%s/%s/%s/%s"
-                                 name version name href)))
+  (with-current-buffer (rust-docs--read-crate-entry-content
+                        name version href)
     (let ((dom (libxml-parse-html-region)))
       (dom-by-id dom "main-content"))))
 
@@ -115,6 +115,27 @@
   (rust-docs--make-entry
    :name (dom-attr node 'title)
    :href (dom-attr node 'href)))
+
+(defun rust-docs--read-crate-contents (name version)
+  "Reads contents of the crate NAME with VERSION."
+  (cond
+   ((eq rust-docs-resourse 'local)
+    (error "Local not supported yet"))
+   ((eq rust-docs-resourse 'web)
+    (url-retrieve-synchronously
+     (url-encode-url
+      (format "https://docs.rs/%s/%s/%s" name version name))))))
+
+(defun rust-docs--read-crate-entry-content (name version href)
+  "Reads content of the HREF of crate NAME with VERSION."
+  (cond
+   ((eq rust-docs-resourse 'local)
+    (error "Local not supported yet"))
+   ((eq rust-docs-resourse 'web)
+    (url-retrieve-synchronously
+     (url-encode-url
+      (format "https://docs.rs/%s/%s/%s/%s"
+              name version name href))))))
 
 ; end-region   -- Fetching info from docs.rs
 
