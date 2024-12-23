@@ -32,19 +32,6 @@
 
 ; end-region   -- Custom configuration
 
-; begin-region -- State
-
-(defvar rust-docs--resourse-base "https://docs.rs"
-  "Could be docs.rs website or local dir path.")
-
-(defvar rust-docs--crate-name nil
-  "Name of the currently searching crate.")
-
-(defvar rust-docs--crate-version "latest"
-  "Version of the currently searching crate.")
-
-; end-region   -- State
-
 ; begin-region -- Public API
 
 (defun rust-docs-open ()
