@@ -8,7 +8,8 @@ Show feature name that allows to use given docs entry
 ** TODO HTML table to org table                                     :feature:
 Add support for the HTML tables
 
-** TODO Introduce special mode for the docs                         :improve:
+** COMPLETED Introduce special mode for the docs                    :improve:
+CLOSED: [2024-12-23 Mon 23:22]
 It's handy to bind =q= key to quit doc window.
 But this bind starts working in all =org-mode= buffers.
 
@@ -17,3 +18,6 @@ But this bind starts working in all =org-mode= buffers.
 - [ ] Write function to generate docs with ~cargo doc~ if they wasn't found
 - [X] Abstract part of the [[file:rust-docs.el::(defun rust-docs--search-crate][rust-docs--search-crate]] to fetch from the local ~target/doc~ directory if ~rust-docs-source~ equals to ~local~.
 - [X] Abstract part of the [[file:rust-docs.el::(defun rust-docs-search-entry][rust-docs-search-entry]] to fetch from the local ~taget/doc/crate~ directory if ~rust-docs-source~ equals to ~local~.
+
+** TODO Add suport for absolute urls in doc links                       :bug:
+Check if ~href~ atribute is a path or a url
