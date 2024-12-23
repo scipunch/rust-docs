@@ -78,7 +78,7 @@
 
 ; end-region   -- Public API
 
-; begin-region -- Fetching info from docs.rs
+; begin-region -- Reading docs
 
 (defun rust-docs--search-crate (name version)
   "Searches for the crate NAME with VERSION on the docs.rs."
@@ -129,8 +129,7 @@
     (error "Local not supported yet"))
    ((eq rust-docs-resourse 'web)
     (url-retrieve-synchronously
-     (url-encode-url
-      (format "https://docs.rs/%s/%s/%s" name version name))))))
+     (rust-docs--web-url name version))))
 
 (defun rust-docs--read-crate-entry-content (name version href)
   "Reads content of the HREF of crate NAME with VERSION."
@@ -139,11 +138,24 @@
     (error "Local not supported yet"))
    ((eq rust-docs-resourse 'web)
     (url-retrieve-synchronously
-     (url-encode-url
-      (format "https://docs.rs/%s/%s/%s/%s"
-              name version name href))))))
+     (rust-docs--web-url name version href)))))
 
-; end-region   -- Fetching info from docs.rs
+; end-region   -- Reading docs
+
+; begin-region -- docs.rs utils
+
+(defun rust-docs--web-url (name version &optional href)
+  "Creates url to docs.rs page.
+Accepts crate NAME and it's VERSION.
+HREF is optional and appended to the end."
+  (url-encode-url
+   (format "https://docs.rs/%s/%s/%s%s"
+           name version name
+           (if href
+               (format "/%s" href)
+             ""))))
+
+; end-region   -- docs.rs utils
 
 ; begin-region -- HTML DOM to Org
 
