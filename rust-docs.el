@@ -62,19 +62,11 @@
           (seq-find
            (lambda (el)
              (string= entry-name (rust-docs--entry-name el)))
-           entries)))
-    (with-current-buffer (get-buffer-create "*docs.rs*")
-      (setq-local buffer-read-only nil)
-      (erase-buffer)
-      (org-mode)
-      (let ((dom
-             (rust-docs-search-entry
-              dependency version (rust-docs--entry-href entry))))
-        (rust-docs--dom-to-org dom))
-      (goto-char 1)
-      (rust-docs-mode)
-      (setq-local buffer-read-only t)
-      (pop-to-buffer (current-buffer)))))
+           entries))
+         (dom
+          (rust-docs-search-entry
+           dependency version (rust-docs--entry-href entry))))
+    (rust-docs--open dom)))
 
 ; end-region   -- Public API
 
@@ -102,6 +94,17 @@
                         name version href)
     (let ((dom (libxml-parse-html-region)))
       (dom-by-id dom "main-content"))))
+
+(defun rust-docs--open (dom)
+  "Creates or reuses docs buffer, parsed DOM and inserts result."
+  (with-current-buffer (get-buffer-create "*docs.rs*")
+    (setq-local buffer-read-only nil)
+    (erase-buffer)
+    (rust-docs--dom-to-org dom)
+    (goto-char 1)
+    (rust-docs-mode)
+    (setq-local buffer-read-only t)
+    (pop-to-buffer (current-buffer))))
 
 (defun rust-docs--search-nodes-by-entry-type (dom entry-type)
   "Returns all nodes from DOM which have ENTRY-TYPE."
