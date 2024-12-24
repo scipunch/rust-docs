@@ -13,6 +13,11 @@
 (cl-defstruct
  (rust-docs--entry (:constructor rust-docs--make-entry)) name href)
 
+(cl-defstruct
+ (rust-docs--context
+  (:constructor rust-docs--make-context))
+ crate-name crate-version href)
+
 (defconst rust-docs--doc-entry-type '("mod" "struct" "trait" "macro")
   "All possible types of doc entries.")
 
@@ -63,10 +68,14 @@
            (lambda (el)
              (string= entry-name (rust-docs--entry-name el)))
            entries))
-         (dom
-          (rust-docs--search-entry
-           dependency version (rust-docs--entry-href entry))))
-    (rust-docs--open dom dependency version)))
+         (context
+          (rust-docs--make-context
+           :crate-name dependency
+           :crate-version version
+           :href
+           (rust-docs--entry-href entry)))
+         (dom (rust-docs--search-entry context)))
+    (rust-docs--open dom context)))
 
 ; end-region   -- Public API
 
@@ -88,20 +97,23 @@
                         version)
       result)))
 
-(defun rust-docs--search-entry (name version href)
-  "Returns details of crate with NAME and VERSION for entry with HREF."
-  (with-current-buffer (rust-docs--read-crate-entry-content
-                        name version href)
-    (let ((dom (libxml-parse-html-region)))
-      (dom-by-id dom "main-content"))))
+(defun rust-docs--search-entry (context)
+  "Returns details of the current CONTEXT."
+  (with-current-buffer (rust-docs--read-crate-entry-content context)
+    (rust-docs--debug "Fetched %s symbols" (point-max))
+    (let* ((dom (libxml-parse-html-region))
+           (main-content (dom-by-id dom "main-content")))
+      (unless main-content
+        (error "Main content not found"))
+      main-content)))
 
-(defun rust-docs--open (dom crate-name crate-version)
+(defun rust-docs--open (dom context)
   "Creates or reuses docs buffer, parsed DOM and inserts result.
-CRATE-NAME and CRATE-VERSION required for the links generation."
+Updates CONTEXT"
   (with-current-buffer (get-buffer-create "*docs.rs*")
     (setq-local buffer-read-only nil)
     (erase-buffer)
-    (rust-docs--dom-to-org dom crate-name crate-version)
+    (rust-docs--dom-to-org dom context)
     (goto-char 1)
     (rust-docs-mode)
     (setq-local buffer-read-only t)
@@ -135,18 +147,20 @@ CRATE-NAME and CRATE-VERSION required for the links generation."
    ((eq rust-docs-resource 'web)
     (url-retrieve-synchronously (rust-docs--web-url name version)))))
 
-(defun rust-docs--read-crate-entry-content (name version href)
-  "Reads content of the HREF of crate NAME with VERSION."
-  (rust-docs--debug "Reading content for the %s@%s with href=%s"
-                    name
-                    version
-                    href)
+(defun rust-docs--read-crate-entry-content (context)
+  "Reads content of the href of crate name with version from CONTEXT."
+  (rust-docs--debug "Reading content for the context=%s" context)
   (cond
    ((eq rust-docs-resource 'local)
     (error "Local not supported yet"))
    ((eq rust-docs-resource 'web)
-    (url-retrieve-synchronously
-     (rust-docs--web-url name version href)))
+    (let ((url
+           (rust-docs--web-url (rust-docs--context-crate-name context)
+                               (rust-docs--context-crate-version
+                                context)
+                               (rust-docs--context-href context))))
+      (rust-docs--debug "Requesting url=%s" url)
+      (url-retrieve-synchronously url)))
    (t
     (error "Unknown rust-docs-resource %s" rust-docs-resource))))
 
@@ -176,19 +190,16 @@ HREF is optional and appended to the end."
 ; begin-region -- HTML DOM to Org
 
 (defun rust-docs--dom-to-org
-    (node crate-name crate-version &optional insert-text insert-links)
+    (node context &optional insert-text insert-links)
   "Reqursively converts NODE to org.
-CRATE-NAME and CRATE-VERSION required for links generation.
+CONTEXT required for the links.
 Inserts string nodes if INSERT-TEXT
 Inserts links as org links if INSERT-LINKS"
-  (rust-docs--debug
-   "Converting node=%s from crate=[%s@%s] insert-text=%s insert-links=%s"
-   node crate-name crate-version insert-text insert-links)
   (cond
    ((stringp node)
     (and insert-text (insert node)))
    ((eq (dom-tag node) 'h1)
-    (rust-docs--h1-to-org node))
+    (rust-docs--h1-to-org node context))
    ((eq (dom-tag node) 'h2)
     (rust-docs--h2-to-org node))
    ((eq (dom-tag node) 'h4)
@@ -198,27 +209,28 @@ Inserts links as org links if INSERT-LINKS"
    ((eq (dom-tag node) 'code)
     (rust-docs--code-to-org node))
    ((eq (dom-tag node) 'p)
-    (rust-docs--p-to-org node crate-name crate-version))
+    (rust-docs--p-to-org node context))
    ((eq (dom-tag node) 'li)
-    (rust-docs--li-to-org node crate-name crate-version))
+    (rust-docs--li-to-org node context))
    ((and (eq (dom-tag node) 'div)
          (dom-by-class node "docblock-short"))
     (rust-docs--docblock-short-to-org node))
    ((and insert-links (eq (dom-tag node) 'a))
-    (rust-docs--a-to-org node crate-name crate-version))
+    (rust-docs--a-to-org node context))
    ((eq (dom-tag node) 'button)
     nil)
    (t
     (dolist (child (dom-children node))
-      (rust-docs--dom-to-org child crate-name crate-version
+      (rust-docs--dom-to-org child context
                              insert-text
                              insert-links)))))
 
-(defun rust-docs--h1-to-org (node)
-  "Converts h1 NODE to org."
+(defun rust-docs--h1-to-org (node context)
+  "Converts h1 NODE to org.
+Owns CONTEXT."
   (insert "* ")
   (dolist (child (dom-children node))
-    (rust-docs--dom-to-org child nil nil t t)) ;; There is no links in h1
+    (rust-docs--dom-to-org child context t t)) ;; There is no links in h1
   (insert "\n"))
 
 (defun rust-docs--h2-to-org (node)
@@ -248,35 +260,47 @@ Inserts links as org links if INSERT-LINKS"
                       (length (dom-children node)))
     (apply #'insert org)))
 
-(defun rust-docs--p-to-org (node crate-name crate-version)
+(defun rust-docs--p-to-org (node context)
   "Converts paragraph NODE to org.
-There could be links in paragraph so CRATE-NAME and CRATE-VERSION required."
+Owns CONTEXT."
   (dolist (child (dom-children node))
-    (rust-docs--dom-to-org child crate-name crate-version t t))
+    (rust-docs--dom-to-org child context t t))
   (insert "\n\n"))
 
-(defun rust-docs--li-to-org (node crate-name crate-version)
+(defun rust-docs--li-to-org (node context)
   "Converts li NODE to org.
-There could be links in list so CRATE-NAME and CRATE-VERSION required."
+Owns CONTEXT."
   (insert "- ")
   (dolist (child (dom-children node))
-    (rust-docs--dom-to-org child crate-name crate-version t t))
+    (rust-docs--dom-to-org child context t t))
   (insert "\n"))
 
-(defun rust-docs--a-to-org (node crate-name crate-version)
+(defun rust-docs--a-to-org (node context)
   "Converts a NODE to org.
-CRATE-NAME and CRATE-VERSION describe current crate."
+Owns CONTEXT."
   (insert
    "[[elisp:"
    (format "%s"
-           `(rust-docs--open
-             (rust-docs-search-entry
-              ,(format "\"%s\"" crate-name)
-              ,(format "\"%s\"" crate-version)
-              ,(format "\"%s\"" (dom-attr node 'href)))
-             ,(format "\"%s\"" crate-name)
-             ,(format "\"%s\"" crate-version))) ;; TODO: Rewrite these naive formats
+           `(rust-docs--process-org-link
+             ,(format "\"%s\"" (dom-attr node 'href))
+             ,context)) ;; TODO: Rewrite these naive formats
    "][" (dom-texts node "") "]]"))
+
+(defun rust-docs--process-org-link (href context)
+  "Uses CONTEXT to redraw another docs entry from HREF."
+  (setf
+   (rust-docs--context-href context)
+   (cond
+    ((string-match-p "\\.\\.\\/.*" href) ;; https://doc.rust-lang.org/stable/std/convert/index.html + ../ops/trit.Deref.html -> doc.rust-lang.org/stable/std/ops/trait.Deref.html
+     (concat
+      (replace-regexp-in-string
+       "[a-z0-9-_.]+\\/[a-z0-9-_.]+$"
+       ""
+       (symbol-name (rust-docs--context-href context)))
+      (substring href 3 nil)))
+    (t
+     (error "Unsupported case href=%s" href))))
+  (rust-docs--open (rust-docs--search-entry context) context))
 
 (defun rust-docs--docblock-short-to-org (node)
   "Converts a div NODE to org."
