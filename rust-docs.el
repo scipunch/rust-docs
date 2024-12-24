@@ -37,7 +37,7 @@
   :group 'rust-docs
   :options '(t nil))
 
-(defcustom rust-docs-resourse 'web
+(defcustom rust-docs-resource 'web
   "Resource to search for the documentation from."
   :type 'string
   :group 'rust-docs
@@ -53,7 +53,7 @@
   (let* ((dependencies (rust-docs--collect-dependencies))
          (dependency (completing-read "Crate: " dependencies))
          (version
-          (or (cdr (alist-get dependency dependencies)) "latest"))
+          (alist-get dependency dependencies "latest" nil #'string=))
          (entries (rust-docs--search-crate dependency version))
          (entry-name
           (completing-read
@@ -82,10 +82,10 @@
                  (rust-docs--search-nodes-by-entry-type
                   dom entry-type))
           (push (rust-docs--entry-from-node entry-node) result)))
-      (rust-docs--debug "Got result for %s@%s: %s"
+      (rust-docs--debug "Found %s entries for %s@%s"
+                        (length result)
                         name
-                        version
-                        result)
+                        version)
       result)))
 
 (defun rust-docs--search-entry (name version href)
@@ -130,19 +130,25 @@ CRATE-NAME and CRATE-VERSION required for the links generation."
 (defun rust-docs--read-crate-contents (name version)
   "Reads contents of the crate NAME with VERSION."
   (cond
-   ((eq rust-docs-resourse 'local)
+   ((eq rust-docs-resource 'local)
     (error "Local not supported yet"))
-   ((eq rust-docs-resourse 'web)
+   ((eq rust-docs-resource 'web)
     (url-retrieve-synchronously (rust-docs--web-url name version)))))
 
 (defun rust-docs--read-crate-entry-content (name version href)
   "Reads content of the HREF of crate NAME with VERSION."
+  (rust-docs--debug "Reading content for the %s@%s with href=%s"
+                    name
+                    version
+                    href)
   (cond
-   ((eq rust-docs-resourse 'local)
+   ((eq rust-docs-resource 'local)
     (error "Local not supported yet"))
-   ((eq rust-docs-resourse 'web)
+   ((eq rust-docs-resource 'web)
     (url-retrieve-synchronously
-     (rust-docs--web-url name version href)))))
+     (rust-docs--web-url name version href)))
+   (t
+    (error "Unknown rust-docs-resource %s" rust-docs-resource))))
 
 ; end-region   -- Reading docs
 
@@ -153,11 +159,17 @@ CRATE-NAME and CRATE-VERSION required for the links generation."
 Accepts crate NAME and it's VERSION.
 HREF is optional and appended to the end."
   (url-encode-url
-   (format "https://docs.rs/%s/%s/%s%s"
-           name version name
-           (if href
-               (format "/%s" href)
-             ""))))
+   (if (string= name "std")
+       (format "https://doc.rust-lang.org/%s/%s%s"
+               version name
+               (if href
+                   (format "/%s" href)
+                 ""))
+     (format "https://docs.rs/%s/%s/%s%s"
+             name version name
+             (if href
+                 (format "/%s" href)
+               "")))))
 
 ; end-region   -- docs.rs utils
 
@@ -169,9 +181,11 @@ HREF is optional and appended to the end."
 CRATE-NAME and CRATE-VERSION required for links generation.
 Inserts string nodes if INSERT-TEXT
 Inserts links as org links if INSERT-LINKS"
+  (rust-docs--debug
+   "Converting node=%s from crate=[%s@%s] insert-text=%s insert-links=%s"
+   node crate-name crate-version insert-text insert-links)
   (cond
    ((stringp node)
-    (rust-docs--debug "Got string node=[%s]" node)
     (and insert-text (insert node)))
    ((eq (dom-tag node) 'h1)
     (rust-docs--h1-to-org node))
@@ -279,7 +293,7 @@ CRATE-NAME and CRATE-VERSION describe current crate."
       (dolist (dep (rust-docs--parse-cargo-toml path))
         (unless (alist-get (car dep) result)
           (push dep result))))
-    (rust-docs--debug "Collected %d dependencies" (length result))
+    (rust-docs--debug "Collected dependencies: %s" result)
     result))
 
 (defun rust-docs--find-all-cargo-files ()
