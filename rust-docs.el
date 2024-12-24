@@ -274,7 +274,7 @@ CRATE-NAME and CRATE-VERSION describe current crate."
 
 (defun rust-docs--collect-dependencies ()
   "Collects dependencies from the project."
-  (let (result)
+  (let ((result (list (rust-docs--get-rust-dep))))
     (dolist (path (rust-docs--find-all-cargo-files))
       (dolist (dep (rust-docs--parse-cargo-toml path))
         (unless (alist-get (car dep) result)
@@ -316,6 +316,16 @@ Returns alist of (dependency-name . version)"
          (car
           (read-from-string
            (format "'(%s)" (buffer-substring begin (point))))))))))
+
+
+(defun rust-docs--get-rust-dep ()
+  "Returns current rust std dependency."
+  (cons
+   "std"
+   (nth
+    1
+    (split-string (shell-command-to-string "rustc --version")
+                  "\\ "))))
 
 ; end-region   -- Cargo.toml parsing
 
