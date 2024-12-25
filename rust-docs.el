@@ -298,6 +298,13 @@ Owns CONTEXT."
        ""
        (symbol-name (rust-docs--context-href context)))
       (substring href 3 nil)))
+    ((string-match-p "^.*\\.html$" href)
+     (concat
+      (replace-regexp-in-string
+       "[a-z0-9_.]+.html$"
+       ""
+       (symbol-name (rust-docs--context-href context)))
+      href))
     (t
      (error "Unsupported case href=%s" href))))
   (rust-docs--open (rust-docs--search-entry context) context))
