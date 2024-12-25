@@ -252,8 +252,9 @@ Owns CONTEXT."
   "Converts code NODE to org."
   (let* ((children (dom-children node))
          (org
-          (if (eq (length children) 1)
-              `("=" ,(dom-text node) "=")
+          (if (and (eq (length children) 1)
+                   (eq (length (string-lines (dom-text node))) 1))
+              `("~" ,(dom-text node) "~")
             `("#+begin_src rust\n"
               ,(dom-texts node "")
               "\n"
