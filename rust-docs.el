@@ -320,7 +320,13 @@ Owns CONTEXT."
    ((eq (dom-tag node) 'table)
     (dolist (child (dom-children node))
       (rust-docs--table-to-org child context))
-    (org-table-align))
+    (org-table-align)
+    (save-excursion
+      (forward-line -1)
+      (org-table-insert-hline) ;; TODO: Idk why hline in the end of the table wont to be inserted
+      (org-table-goto-line 0)
+      (org-table-insert-hline))
+    (insert "\n"))
    ((or (eq (dom-tag node) 'thead) (eq (dom-tag node) 'tbody))
     (dolist (child (dom-children node))
       (rust-docs--table-to-org child context)))
