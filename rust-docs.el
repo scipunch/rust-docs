@@ -214,7 +214,7 @@ Inserts links as org links if INSERT-LINKS"
     (rust-docs--li-to-org node context))
    ((and (eq (dom-tag node) 'div)
          (dom-by-class node "docblock-short"))
-    (rust-docs--docblock-short-to-org node))
+    (rust-docs--dockblock-short-to-org node))
    ((and insert-links (eq (dom-tag node) 'a))
     (rust-docs--a-to-org node context))
    ((eq (dom-tag node) 'button)
@@ -310,6 +310,7 @@ Owns CONTEXT."
   (rust-docs--open (rust-docs--search-entry context) context))
 
 (defun rust-docs--docblock-short-to-org (node)
+(defun rust-docs--dockblock-short-to-org (node)
   "Converts a div NODE to org."
   (insert " " (dom-texts node "")))
 
