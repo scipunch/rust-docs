@@ -5,7 +5,8 @@
 ** TODO Required features label                                     :feature:
 Show feature name that allows to use given docs entry
 
-** TODO HTML table to org table                                     :feature:
+** COMPLETED HTML table to org table                                :feature:
+CLOSED: [2024-12-25 Wed 20:14]
 Add support for the HTML tables
 
 ** COMPLETED Introduce special mode for the docs                    :improve:

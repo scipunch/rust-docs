@@ -7,6 +7,7 @@
 (require 'dom)
 (require 'cl-lib)
 (require 'project)
+(require 'org)
 
 ; begin-region -- Domain
 
@@ -219,6 +220,8 @@ Inserts links as org links if INSERT-LINKS"
     (rust-docs--a-to-org node context))
    ((eq (dom-tag node) 'button)
     nil)
+   ((eq (dom-tag node) 'table)
+    (rust-docs--table-to-org node context))
    (t
     (dolist (child (dom-children node))
       (rust-docs--dom-to-org child context
@@ -309,7 +312,26 @@ Owns CONTEXT."
      (error "Unsupported case href=%s" href))))
   (rust-docs--open (rust-docs--search-entry context) context))
 
-(defun rust-docs--docblock-short-to-org (node)
+(defun rust-docs--table-to-org (node context)
+  "Convert a table NODE to org.
+Owns CONTEXT."
+  (rust-docs--debug "Table node=%s" node)
+  (cond
+   ((eq (dom-tag node) 'table)
+    (dolist (child (dom-children node))
+      (rust-docs--table-to-org child context))
+    (org-table-align))
+   ((or (eq (dom-tag node) 'thead) (eq (dom-tag node) 'tbody))
+    (dolist (child (dom-children node))
+      (rust-docs--table-to-org child context)))
+   ((eq (dom-tag node) 'tr)
+    (dolist (child (dom-children node))
+      (rust-docs--table-to-org child context))
+    (insert " |\n"))
+   ((or (eq (dom-tag node) 'td) (eq (dom-tag node) 'th))
+    (insert "| ")
+    (rust-docs--dom-to-org node context t t))))
+
 (defun rust-docs--dockblock-short-to-org (node)
   "Converts a div NODE to org."
   (insert " " (dom-texts node "")))
