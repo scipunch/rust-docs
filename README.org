@@ -2,7 +2,8 @@
 #+author: SciPunch
 
 * Tasks
-** TODO Required features label                                     :feature:
+** COMPLETED Required features label                                :feature:
+CLOSED: [2024-12-25 Wed 21:09]
 Show feature name that allows to use given docs entry
 
 ** COMPLETED HTML table to org table                                :feature:

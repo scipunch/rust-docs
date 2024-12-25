@@ -216,6 +216,8 @@ Inserts links as org links if INSERT-LINKS"
    ((and (eq (dom-tag node) 'div)
          (dom-by-class node "docblock-short"))
     (rust-docs--dockblock-short-to-org node))
+   ((and (eq (dom-tag node) 'div) (dom-by-class node "stab"))
+    (rust-docs--stab-to-org node context))
    ((and insert-links (eq (dom-tag node) 'a))
     (rust-docs--a-to-org node context))
    ((eq (dom-tag node) 'button)
@@ -342,6 +344,14 @@ Owns CONTEXT."
 (defun rust-docs--dockblock-short-to-org (node)
   "Converts a div NODE to org."
   (insert " " (dom-texts node "")))
+
+(defun rust-docs--stab-to-org (node context)
+  "Convert a div stab NODE to org.
+Owns CONTEXT."
+  (insert "#+begin_comment\n")
+  (dolist (child (dom-children node))
+    (rust-docs--dom-to-org child context t t))
+  (insert "\n#+end_comment\n\n"))
 
 ; end-region   -- HTML DOM to Org
 
