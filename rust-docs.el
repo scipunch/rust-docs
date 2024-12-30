@@ -315,6 +315,7 @@ Owns CONTEXT."
   (let ((result (list (rust-docs--get-rust-dep))))
     (dolist (path (rust-docs--find-all-cargo-files))
       (dolist (dep (rust-docs--parse-cargo-toml path))
+        (message "Dep=%s" dep)
         (unless (alist-get (car dep) result)
           (push dep result))))
     (rust-docs--debug "Collected dependencies: %s" result)
@@ -338,22 +339,33 @@ Owns CONTEXT."
 Returns alist of (dependency-name . version)"
   (with-temp-buffer
     (insert-file-contents path)
-    (let ((begin (re-search-forward "^\\[dependencies\\]$" nil t 1))
-          (end
-           (or (re-search-forward "^\\[.*\\]$" nil t 1) (point-max))))
+    (let ((begin (re-search-forward "^\\[dependencies\\]$" nil t 1)))
       (when begin
-        (goto-char begin)
+        (delete-region (point-min) begin)
+        (delete-region
+          (or (rust-docs--find-toml-entry-point ".*") (point-max))
+         (point-max))
+        (beginning-of-buffer)
+        (message "Got buffer: %s" (buffer-string))
         (while
-            (and
-             (< (point) end)
-             (re-search-forward
-              "^\\([a-z-_0-9]+\\)\\ +?=\\(.*\"\\([0-9.]+\\)\"\\)?.*$"
-              nil t))
+            (re-search-forward
+             "^\\([a-z-_0-9]+\\)\\ +?=\\(.*\"\\([0-9.]+\\)\"\\)?.*$"
+             nil t)
           (replace-match "(\"\\1\" . \"\\3\")" nil nil))
-        (eval
-         (car
-          (read-from-string
-           (format "'(%s)" (buffer-substring begin (point))))))))))
+          (eval
+           (car
+            (read-from-string (format "'(%s)" (buffer-string)))))))))
+
+(defun rust-docs--find-toml-entry-point (entry-regex)
+  "Searches from the current point ENTRY-REGEX."
+  (save-excursion
+    (when (re-search-forward (format "^\\[%s\\]$" entry-regex)
+                             nil
+                             t
+                             1)
+      (backward-sexp)
+      (forward-line -1)
+      (point))))
 
 
 (defun rust-docs--get-rust-dep ()
