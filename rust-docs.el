@@ -7,6 +7,7 @@
 (require 'dom)
 (require 'cl-lib)
 (require 'project)
+(require 'org)
 
 ; begin-region -- Domain
 
@@ -213,12 +214,17 @@ Inserts links as org links if INSERT-LINKS"
    ((eq (dom-tag node) 'li)
     (rust-docs--li-to-org node context))
    ((and (eq (dom-tag node) 'div)
-         (dom-by-class node "docblock-short"))
-    (rust-docs--docblock-short-to-org node))
+         (string= (dom-attr node 'class) "dockblock-short"))
+    (rust-docs--dockblock-short-to-org node))
+   ((and (eq (dom-tag node) 'div)
+         (string= (dom-attr node 'class) "stab portability"))
+    (rust-docs--stab-to-org node context))
    ((and insert-links (eq (dom-tag node) 'a))
     (rust-docs--a-to-org node context))
    ((eq (dom-tag node) 'button)
     nil)
+   ((eq (dom-tag node) 'table)
+    (rust-docs--table-to-org node context))
    (t
     (dolist (child (dom-children node))
       (rust-docs--dom-to-org child context
@@ -249,8 +255,9 @@ Owns CONTEXT."
   "Converts code NODE to org."
   (let* ((children (dom-children node))
          (org
-          (if (eq (length children) 1)
-              `("=" ,(dom-text node) "=")
+          (if (and (eq (length children) 1)
+                   (eq (length (string-lines (dom-text node))) 1))
+              `("~" ,(dom-text node) "~")
             `("#+begin_src rust\n"
               ,(dom-texts node "")
               "\n"
@@ -298,13 +305,54 @@ Owns CONTEXT."
        ""
        (symbol-name (rust-docs--context-href context)))
       (substring href 3 nil)))
+    ((string-match-p "^.*\\.html$" href)
+     (concat
+      (replace-regexp-in-string
+       "[a-z0-9_.]+.html$"
+       ""
+       (symbol-name (rust-docs--context-href context)))
+      href))
     (t
      (error "Unsupported case href=%s" href))))
   (rust-docs--open (rust-docs--search-entry context) context))
 
-(defun rust-docs--docblock-short-to-org (node)
+(defun rust-docs--table-to-org (node context)
+  "Convert a table NODE to org.
+Owns CONTEXT."
+  (rust-docs--debug "Table node=%s" node)
+  (cond
+   ((eq (dom-tag node) 'table)
+    (dolist (child (dom-children node))
+      (rust-docs--table-to-org child context))
+    (org-table-align)
+    (save-excursion
+      (forward-line -1)
+      (org-table-insert-hline) ;; TODO: Idk why hline in the end of the table wont to be inserted
+      (org-table-goto-line 0)
+      (org-table-insert-hline))
+    (insert "\n"))
+   ((or (eq (dom-tag node) 'thead) (eq (dom-tag node) 'tbody))
+    (dolist (child (dom-children node))
+      (rust-docs--table-to-org child context)))
+   ((eq (dom-tag node) 'tr)
+    (dolist (child (dom-children node))
+      (rust-docs--table-to-org child context))
+    (insert " |\n"))
+   ((or (eq (dom-tag node) 'td) (eq (dom-tag node) 'th))
+    (insert "| ")
+    (rust-docs--dom-to-org node context t t))))
+
+(defun rust-docs--dockblock-short-to-org (node)
   "Converts a div NODE to org."
   (insert " " (dom-texts node "")))
+
+(defun rust-docs--stab-to-org (node context)
+  "Convert a div stab NODE to org.
+Owns CONTEXT."
+  (insert "#+begin_comment\n")
+  (dolist (child (dom-children node))
+    (rust-docs--dom-to-org child context t t))
+  (insert "\n#+end_comment\n\n"))
 
 ; end-region   -- HTML DOM to Org
 
